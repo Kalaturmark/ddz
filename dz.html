@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поиск фильмов</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        input, select, button {
+            padding: 10px;
+            margin: 5px;
+        }
+        #results, #details {
+            margin-top: 20px;
+        }
+        .movie-item {
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        .pagination {
+            margin-top: 20px;
+        }
+        .pagination button {
+            margin: 0 2px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Поиск фильмов</h1>
+    <form id="search-form">
+        <input type="text" id="title" placeholder="Введите название фильма..." required>
+        <select id="type">
+            <option value="movie">Фильм</option>
+            <option value="series">Сериал</option>
+            <option value="episode">Эпизод</option>
+        </select>
+        <button type="submit">Поиск</button>
+    </form>
+    <div id="results"></div>
+    <div id="pagination"></div>
+    <div id="details"></div>
+</div>
+<script>
+    const apiKey = 'YOUR_OMDB_API_KEY';
+    const apiUrl = 'https://www.omdbapi.com/';
+
+    document.getElementById('search-form').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const title = document.getElementById('title').value;
+        const type = document.getElementById('type').value;
+        searchMovies(title, type, 1);
+    });
+
+    function searchMovies(title, type, page) {
+        fetch(`${apiUrl}?s=${title}&type=${type}&page=${page}&apikey=${apiKey}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.Response === "True") {
+                    displayResults(data.Search);
+                    displayPagination(data.totalResults, title, type, page);
+                } else {
+                    document.getElementById('results').innerHTML = '<p>Фильм не найден!</p>';
+                    document.getElementById('pagination').innerHTML = '';
+                }
+            });
+    }
+
+    function displayResults(movies) {
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '';
+        movies.forEach(movie => {
+            const movieItem = document.createElement('div');
+            movieItem.classList.add('movie-item');
+            movieItem.innerHTML = `
+                    <h3>${movie.Title} (${movie.Year})</h3>
+                    <button onclick="showDetails('${movie.imdbID}')">Подробнее</button>
+                `;
+            resultsDiv.appendChild(movieItem);
+        });
+    }
+
+    function displayPagination(totalResults, title, type, currentPage) {
+        const pages = Math.ceil(totalResults / 10);
+        const paginationDiv = document.getElementById('pagination');
+        paginationDiv.innerHTML = '';
+        for (let i = 1; i <= pages; i++) {
+            const pageButton = document.createElement('button');
+            pageButton.textContent = i;
+            if (i === currentPage) {
+                pageButton.disabled = true;
+            }
+            pageButton.addEventListener('click', () => searchMovies(title, type, i));
+            paginationDiv.appendChild(pageButton);
+        }
+    }
+
+    function showDetails(movieId) {
+        fetch(`${apiUrl}?i=${movieId}&apikey=${apiKey}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.Response === "True") {
+                    const detailsDiv = document.getElementById('details');
+                    detailsDiv.innerHTML = `
+                            <h2>${data.Title} (${data.Year})</h2>
+                            <p>${data.Plot}</p>
+                            <p><strong>Режиссёр:</strong> ${data.Director}</p>
+                            <p><strong>Актёры:</strong> ${data.Actors}</p>
+                            <p><strong>Жанр:</strong> ${data.Genre}</p>
+                        `;
+                } else {
+                    document.getElementById('details').innerHTML = '<p>Подробная информация не найдена!</p>';
+                }
+            });
+    }
+</script>
+</body>
+</html>
